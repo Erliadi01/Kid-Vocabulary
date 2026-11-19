@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Let's Learn English: Jungle Adventure - Aplikasi Edukasi Anak Interaktif">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Jungle English">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png" />
+
+  <title>Let's Learn English! 🌴🦁</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script>
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted && navigator.vendor && navigator.vendor.startsWith('Apple')) {
+        window.location.reload();
+      }
+    });
+  </script>
+
+  <script>
+    var flet = {
+      pyodide: false,
+      multiView: false,
+      noCdn: false,
+      webSocketEndpoint: "/ws",
+      entrypointBaseUrl: "/",
+      assetBase: "/",
+      routeUrlStrategy: "path",
+      canvasKitBaseUrl: null,
+      pyodideUrl: "/pyodide/pyodide.mjs",
+      webRenderer: "auto",
+      fontFallbackBaseUrl: null,
+      appPackageUrl: "app.tar.gz"
+    }
+
+    flet.flutterAppLoaded = new Promise((resolve) => {
+      flet.flutterAppResolve = resolve;
+    });
+
+    flet.flutterAppLoaded.then((flutterApp) => {
+      console.log("Flutter app loaded");
+    });
+  </script>
+
+  <!-- fletAppConfig -->
+
+  <script src="python.js"></script>
+
+  <!-- ========================================== -->
+  <!-- MOBILE AUDIO ENGINE & JAVASCRIPT EXEC BRIDGE -->
+  <!-- ========================================== -->
+  <script>
+    (function() {
+      // 1. Audio Unlock for Mobile iOS & Android Browsers
+      let audioUnlocked = false;
+      let globalAudioCtx = null;
+
+      function unlockAudio() {
+        if (audioUnlocked) return;
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            globalAudioCtx = new AudioCtx();
+            const buffer = globalAudioCtx.createBuffer(1, 1, 22050);
+            const source = globalAudioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(globalAudioCtx.destination);
+            source.start(0);
+            if (globalAudioCtx.state === 'suspended') {
+              globalAudioCtx.resume();
+            }
+          }
+          // Warm up SpeechSynthesis on first touch
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            const dummy = new SpeechSynthesisUtterance('');
+            dummy.volume = 0.01;
+            window.speechSynthesis.speak(dummy);
+          }
+          audioUnlocked = true;
+          console.log("[AudioEngine] Mobile browser audio unlocked successfully!");
+        } catch (e) {
+          console.warn("[AudioEngine] Audio unlock exception:", e);
+        }
+      }
+
+      window.addEventListener('touchstart', unlockAudio, { once: false, passive: true });
+      window.addEventListener('click', unlockAudio, { once: false, passive: true });
+      window.addEventListener('pointerdown', unlockAudio, { once: false, passive: true });
+
+      // 2. Play Audio File with HTML5 Audio & Fallback to SpeechSynthesis
+      window.playAudioWord = function(filename, fallbackText) {
+        unlockAudio();
+        console.log("[AudioEngine] Playing audio word:", filename, "Fallback:", fallbackText);
+        let cleanFile = filename.endsWith('.mp3') ? filename : filename + '.mp3';
+        let audioUrl = '/audio/' + cleanFile;
+        let audio = new Audio(audioUrl);
+        audio.preload = 'auto';
+
+        let playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log("[AudioEngine] Audio playback started for:", audioUrl);
+          }).catch((err) => {
+            console.warn("[AudioEngine] HTML5 Audio play failed:", err, "-> Falling back to Web Speech API");
+            if (fallbackText) {
+              window.speakText(fallbackText);
+            }
+          });
+        }
+      };
+
+      // 3. Web Speech API Synthesizer
+      window.speakText = function(text) {
+        unlockAudio();
+        if (!('speechSynthesis' in window)) {
+          console.error("[AudioEngine] SpeechSynthesis not supported in this browser");
+          return;
+        }
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'en-US';
+          u.rate = 0.9;
+          u.pitch = 1.1; // Friendly tone for children
+
+          const voices = window.speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            const enVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha')));
+            if (enVoice) u.voice = enVoice;
+          }
+
+          window.speechSynthesis.speak(u);
+          console.log("[AudioEngine] SpeechSynthesis uttered:", text);
+        } catch (e) {
+          console.error("[AudioEngine] SpeechSynthesis speak failed:", e);
+        }
+      };
+
+      // 4. Synthesized SFX (Clicks, Chimes, Buzzers)
+      window.playSfx = function(type) {
+        unlockAudio();
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = globalAudioCtx || new AudioCtx();
+          if (ctx.state === 'suspended') ctx.resume();
+          const now = ctx.currentTime;
+
+          if (type === 'click') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(650, now);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.05);
+          } else if (type === 'correct') {
+            [523, 659, 784, 1046].forEach((freq, idx) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              const t = now + (idx * 0.08);
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, t);
+              gain.gain.setValueAtTime(0.3, t);
+              gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(t);
+              osc.stop(t + 0.14);
+            });
+          } else if (type === 'wrong') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(260, now);
+            osc.frequency.linearRampToValueAtTime(140, now + 0.22);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.22);
+          }
+        } catch (e) {
+          console.warn("[AudioEngine] SFX failed:", e);
+        }
+      };
+
+      // 5. Title-Based WebSocket Command Bridge
+      let lastProcessedToken = "";
+      function processCommand(raw) {
+        if (!raw || typeof raw !== 'string') return;
+        if (raw.startsWith("SND:")) {
+          let content = raw.substring(4);
+          let parts = content.split("##");
+          let cmd = parts[0];
+          let token = parts.length > 1 ? parts[1] : cmd;
+          if (token === lastProcessedToken) return;
+          lastProcessedToken = token;
+
+          console.log("[AudioEngine] Processing Audio Command:", cmd);
+          if (cmd.startsWith("file:")) {
+            // format: file:lion.mp3:Lion
+            let sub = cmd.substring(5).split(":");
+            let fn = sub[0];
+            let fb = sub.length > 1 ? sub[1] : "";
+            window.playAudioWord(fn, fb);
+          } else if (cmd.startsWith("speak:")) {
+            window.speakText(cmd.substring(6));
+          } else if (cmd.startsWith("sfx:")) {
+            window.playSfx(cmd.substring(4));
+          }
+        } else if (raw.startsWith("JS:")) {
+          let content = raw.substring(3);
+          let parts = content.split("##");
+          let jsB64 = parts[0];
+          let token = parts.length > 1 ? parts[1] : jsB64;
+          if (token === lastProcessedToken) return;
+          lastProcessedToken = token;
+
+          try {
+            let code = decodeURIComponent(escape(atob(jsB64)));
+            new Function(code)();
+          } catch(err) {
+            console.error("[AudioEngine] Executing JS command failed:", err);
+          }
+        }
+      }
+
+      // Check on title mutations & periodic check
+      const origTitle = document.title;
+      setInterval(() => {
+        let t = document.title;
+        if (t && (t.startsWith("SND:") || t.startsWith("JS:"))) {
+          processCommand(t);
+        }
+      }, 40);
+
+      const titleTag = document.querySelector('title');
+      if (titleTag) {
+        const obs = new MutationObserver(() => {
+          let t = document.title;
+          if (t && (t.startsWith("SND:") || t.startsWith("JS:"))) {
+            processCommand(t);
+          }
+        });
+        obs.observe(titleTag, { subtree: true, characterData: true, childList: true });
+      }
+    })();
+  </script>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #1B5E20; overflow: hidden; width: 100vw; height: 100vh;">
+  <div id="loading" role="status" aria-label="Loading">
+    <style>
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 50%, #43A047 100%);
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .loading-logo {
+        font-size: 64px;
+        animation: bounce 1.2s infinite ease-in-out;
+      }
+
+      .loading-text {
+        margin-top: 16px;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 1px;
+      }
+
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-16px); }
+      }
+    </style>
+    <div class="loading-logo">🌴🦁</div>
+    <div class="loading-text">LET'S LEARN ENGLISH!</div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

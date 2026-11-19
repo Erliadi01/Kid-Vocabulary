@@ -1,0 +1,35 @@
+# Virtual Environments (sangat berat & khusus lokal laptop)
+venv/
+venv_hp/
+.venv/
+env/
+
+# File Rahasia, Konfigurasi API Key & Environment
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+mcp_config.json
+config_local.py
+
+# Cache & File Sistem Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Database SQLite & Data Skor Lokal (opsional: hapus baris *.db jika ingin ikut di-push)
+*.db
+*.sqlite
+*.sqlite3
+
+# File Audio Hasil Generate Otomatis (opsional: agar repo tidak berat)
+assets/audio/*.mp3
+
+# File Konfigurasi Editor / IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
